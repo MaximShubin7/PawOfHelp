@@ -1,3 +1,9 @@
+using FluentValidation;
+using PawOfHelp.DTOs.Auth;
+using PawOfHelp.Services;
+using PawOfHelp.Services.Interfaces;
+using PawOfHelp.Validators.Auth;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+
+// Регистрация валидаторов
+builder.Services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestValidator>();
+builder.Services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+
+// Регистрация сервисов
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
