@@ -1,10 +1,11 @@
-﻿using PawOfHelp.DTOs.Auth;
+﻿// Services/Interfaces/IAuthService.cs
+using PawOfHelp.DTOs.Auth;
 
-namespace PawOfHelp.Services.Interfaces
+namespace PawOfHelp.Services.Interfaces;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request);
-        Task<AuthResponseDto> LoginAsync(LoginRequestDto request);
-    }
+    Task RegisterAsync(RegisterRequestDto request);
+    Task<AuthResponseDto> ConfirmEmailAsync(ConfirmEmailRequestDto request);
+    Task<AuthResponseDto> LoginAsync(LoginRequestDto request);
 }

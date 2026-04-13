@@ -1,59 +1,83 @@
-﻿using FluentValidation;
+﻿// Controllers/AuthController.cs
 using Microsoft.AspNetCore.Mvc;
+using FluentValidation;
 using PawOfHelp.DTOs.Auth;
 using PawOfHelp.Services.Interfaces;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+namespace PawOfHelp.Controllers;
 
-namespace PawOfHelp.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    private readonly IAuthService _authService;
+    private readonly IValidator<RegisterRequestDto> _registerValidator;
+    private readonly IValidator<ConfirmEmailRequestDto> _confirmValidator;
+    private readonly IValidator<LoginRequestDto> _loginValidator;
+
+    public AuthController(
+        IAuthService authService,
+        IValidator<RegisterRequestDto> registerValidator,
+        IValidator<ConfirmEmailRequestDto> confirmValidator,
+        IValidator<LoginRequestDto> loginValidator)
     {
-        private readonly IValidator<RegisterRequestDto> _registerValidator;
-        private readonly IValidator<LoginRequestDto> _loginValidator;
-        private readonly IAuthService _authService;
+        _authService = authService;
+        _registerValidator = registerValidator;
+        _confirmValidator = confirmValidator;
+        _loginValidator = loginValidator;
+    }
 
-        public AuthController(
-            IValidator<RegisterRequestDto> registerValidator,
-            IValidator<LoginRequestDto> loginValidator,
-            IAuthService authService)
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+    {
+        var validationResult = await _registerValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.First().ErrorMessage);
+
+        try
         {
-            _registerValidator = registerValidator;
-            _loginValidator = loginValidator;
-            _authService = authService;
+            await _authService.RegisterAsync(request);
+            return Ok(new { message = "Код подтверждения отправлен на email" });
         }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+        catch (Exception ex)
         {
-            var validationResult = await _registerValidator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors.First().ErrorMessage);
-
-            var result = await _authService.RegisterAsync(request);
-            return Ok(result);
+            return BadRequest(ex.Message);
         }
+    }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
+    [HttpPost("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequestDto request)
+    {
+        var validationResult = await _confirmValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.First().ErrorMessage);
+
+        try
         {
-            var validationResult = await _loginValidator.ValidateAsync(request);
+            var response = await _authService.ConfirmEmailAsync(request);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors.First().ErrorMessage);
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
+    {
+        var validationResult = await _loginValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors.First().ErrorMessage);
 
-            try
-            {
-                var result = await _authService.LoginAsync(request);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+        try
+        {
+            var response = await _authService.LoginAsync(request);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 }

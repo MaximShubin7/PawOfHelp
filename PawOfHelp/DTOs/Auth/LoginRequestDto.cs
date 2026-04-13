@@ -1,8 +1,8 @@
-﻿namespace PawOfHelp.DTOs.Auth
+﻿// DTOs/Auth/LoginRequestDto.cs
+namespace PawOfHelp.DTOs.Auth;
+
+public class LoginRequestDto
 {
-    public class LoginRequestDto
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }
