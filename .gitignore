@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /PawOfHelp/appsettings.json
+/PawOfHelp/appsettings.Development.json
+/PawOfHelp/appsettings.Development.json
