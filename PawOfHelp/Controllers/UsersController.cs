@@ -66,4 +66,20 @@ public class UsersController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+        try
+        {
+            await _userService.ChangePasswordAsync(userId, dto);
+            return Ok(new { message = "Пароль успешно изменён" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }
