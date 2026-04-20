@@ -24,14 +24,6 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    private string ExtractNameFromEmail(string email)
-    {
-        var atIndex = email.IndexOf('@');
-        if (atIndex > 0)
-            return email.Substring(0, atIndex);
-        return email;
-    }
-
     private string GenerateJwtToken(User user)
     {
         var secretKey = _configuration["Jwt:SecretKey"];
@@ -75,6 +67,7 @@ public class AuthService : IAuthService
             Id = Guid.NewGuid(),
             Email = request.Email,
             Password = passwordHash,
+            Name = string.Empty,
             Role = request.Role,
             Code = code,
             ExpiresAt = DateTime.UtcNow.AddMinutes(10),
@@ -87,7 +80,7 @@ public class AuthService : IAuthService
         await _emailService.SendVerificationCodeAsync(request.Email, code);
     }
 
-    public async Task<AuthResponseDto> ConfirmEmailAsync(ConfirmEmailRequestDto request)
+    public async Task<VolunteerAuthResponseDto> ConfirmEmailAsync(ConfirmEmailRequestDto request)
     {
         var verification = await _context.VerificationCodes
             .FirstOrDefaultAsync(c => c.Email == request.Email);
@@ -113,7 +106,7 @@ public class AuthService : IAuthService
             Id = Guid.NewGuid(),
             Email = verification.Email,
             Password = verification.Password,
-            Name = ExtractNameFromEmail(verification.Email),
+            Name = verification.Name,
             Role = verification.Role,
             Age = null,
             Description = null,
@@ -124,12 +117,44 @@ public class AuthService : IAuthService
         };
 
         _context.Users.Add(user);
+
+        if (verification.Role == 2)
+        {
+            var organizationDetails = new OrganizationDetails
+            {
+                UserId = user.Id
+            };
+            _context.OrganizationsDetails.Add(organizationDetails);
+        }
+
         _context.VerificationCodes.Remove(verification);
         await _context.SaveChangesAsync();
 
         var token = GenerateJwtToken(user);
 
-        return new AuthResponseDto
+        if (user.Role == 2 && user.OrganizationDetails != null)
+        {
+            return new OrganizationAuthResponseDto
+            {
+                AccessToken = token,
+                TokenType = "Bearer",
+                UserId = user.Id,
+                Email = user.Email,
+                Name = user.Name,
+                Role = user.Role,
+                Age = user.Age,
+                Description = user.Description,
+                PhotoUrl = user.PhotoUrl,
+                SumRating = user.SumRating,
+                CountRating = user.CountRating,
+                CreatedAt = user.CreatedAt,
+                Phone = user.OrganizationDetails.Phone,
+                Website = user.OrganizationDetails.Website,
+                DonationDetails = user.OrganizationDetails.DonationDetails
+            };
+        }
+
+        return new VolunteerAuthResponseDto
         {
             AccessToken = token,
             TokenType = "Bearer",
@@ -139,15 +164,17 @@ public class AuthService : IAuthService
             Role = user.Role,
             Age = user.Age,
             Description = user.Description,
+            PhotoUrl = user.PhotoUrl,
             SumRating = user.SumRating,
             CountRating = user.CountRating,
-            PhotoUrl = null
+            CreatedAt = user.CreatedAt
         };
     }
 
-    public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)
+    public async Task<VolunteerAuthResponseDto> LoginAsync(LoginRequestDto request)
     {
         var user = await _context.Users
+            .Include(u => u.OrganizationDetails)
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
@@ -160,7 +187,29 @@ public class AuthService : IAuthService
 
         var token = GenerateJwtToken(user);
 
-        return new AuthResponseDto
+        if (user.Role == 2 && user.OrganizationDetails != null)
+        {
+            return new OrganizationAuthResponseDto
+            {
+                AccessToken = token,
+                TokenType = "Bearer",
+                UserId = user.Id,
+                Email = user.Email,
+                Name = user.Name,
+                Role = user.Role,
+                Age = user.Age,
+                Description = user.Description,
+                PhotoUrl = user.PhotoUrl,
+                SumRating = user.SumRating,
+                CountRating = user.CountRating,
+                CreatedAt = user.CreatedAt,
+                Phone = user.OrganizationDetails.Phone,
+                Website = user.OrganizationDetails.Website,
+                DonationDetails = user.OrganizationDetails.DonationDetails
+            };
+        }
+
+        return new VolunteerAuthResponseDto
         {
             AccessToken = token,
             TokenType = "Bearer",
@@ -170,9 +219,62 @@ public class AuthService : IAuthService
             Role = user.Role,
             Age = user.Age,
             Description = user.Description,
+            PhotoUrl = user.PhotoUrl,
             SumRating = user.SumRating,
             CountRating = user.CountRating,
-            PhotoUrl = user.PhotoUrl
+            CreatedAt = user.CreatedAt
         };
+    }
+
+    public async Task ForgotPasswordAsync(ForgotPasswordRequestDto request)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null) return;
+
+        var existingCode = await _context.VerificationCodes.FirstOrDefaultAsync(c => c.Email == request.Email);
+        if (existingCode != null) _context.VerificationCodes.Remove(existingCode);
+
+        var code = new Random().Next(100000, 999999).ToString();
+
+        var resetCode = new VerificationCode
+        {
+            Id = Guid.NewGuid(),
+            Email = request.Email,
+            Code = code,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            AttemptsLeft = 3,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.VerificationCodes.Add(resetCode);
+        await _context.SaveChangesAsync();
+        await _emailService.SendPasswordResetCodeAsync(request.Email, code);
+    }
+
+    public async Task ResetPasswordWithCodeAsync(ResetPasswordWithCodeRequestDto request)
+    {
+        if (request.NewPassword.Length < 8)
+            throw new Exception("Пароль должен содержать минимум 8 символов");
+
+        var resetCode = await _context.VerificationCodes.FirstOrDefaultAsync(c => c.Email == request.Email);
+        if (resetCode == null) throw new Exception("Код не найден. Запросите новый код");
+        if (resetCode.ExpiresAt < DateTime.UtcNow) throw new Exception("Код истёк. Запросите новый");
+        if (resetCode.AttemptsLeft <= 0) throw new Exception("Превышено число попыток. Запросите новый код");
+
+        if (resetCode.Code != request.Code)
+        {
+            resetCode.AttemptsLeft--;
+            await _context.SaveChangesAsync();
+            throw new Exception($"Неверный код. Осталось попыток: {resetCode.AttemptsLeft}");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null) throw new Exception("Пользователь не найден");
+
+        var newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.Password = newPasswordHash;
+
+        _context.VerificationCodes.Remove(resetCode);
+        await _context.SaveChangesAsync();
     }
 }

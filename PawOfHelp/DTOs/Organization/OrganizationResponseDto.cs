@@ -1,12 +1,14 @@
-﻿// DTOs/User/UserProfileResponseDto.cs
-namespace PawOfHelp.DTOs.User;
+﻿// DTOs/Organization/OrganizationResponseDto.cs
+namespace PawOfHelp.DTOs.Organization;
 
-public class UserProfileResponseDto
+public class OrganizationResponseDto
 {
     public Guid UserId { get; set; }
     public string Email { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public short? Age { get; set; }
+    public string? Phone { get; set; }
+    public string? Website { get; set; }
+    public string? DonationDetails { get; set; }
     public string? Description { get; set; }
     public string? PhotoUrl { get; set; }
     public int SumRating { get; set; }

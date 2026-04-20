@@ -14,4 +14,5 @@ public class User
     public short Role { get; set; }
     public string? PhotoUrl { get; set; }
     public DateTime CreatedAt { get; set; }
+    public OrganizationDetails? OrganizationDetails { get; set; }
 }

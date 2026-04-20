@@ -7,5 +7,5 @@ public class UpdateProfileDto
     public short? Age { get; set; }
     public string? Description { get; set; }
     public IFormFile? Photo { get; set; }
-    public string? PhotoUrlFromWeb { get; set; }  // ← новое поле
+    public string? PhotoUrlFromWeb { get; set; }
 }

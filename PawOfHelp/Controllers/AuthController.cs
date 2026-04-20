@@ -80,4 +80,32 @@ public class AuthController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+    {
+        try
+        {
+            await _authService.ForgotPasswordAsync(request);
+            return Ok(new { message = "Если пользователь существует, код отправлен на email" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("reset-password-with-code")]
+    public async Task<IActionResult> ResetPasswordWithCode([FromBody] ResetPasswordWithCodeRequestDto request)
+    {
+        try
+        {
+            await _authService.ResetPasswordWithCodeAsync(request);
+            return Ok(new { message = "Пароль успешно изменён" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }

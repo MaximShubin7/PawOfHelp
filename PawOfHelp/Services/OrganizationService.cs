@@ -1,37 +1,40 @@
-﻿// Services/UserService.cs
+﻿// Services/OrganizationService.cs
 using Microsoft.EntityFrameworkCore;
 using PawOfHelp.Data;
-using PawOfHelp.DTOs.User;
+using PawOfHelp.DTOs.Organization;
 using PawOfHelp.Models;
 using PawOfHelp.Services.Interfaces;
 
 namespace PawOfHelp.Services;
 
-public class UserService : IUserService
+public class OrganizationService : IOrganizationService
 {
     private readonly AppDbContext _context;
     private readonly IImageKitService _imageKitService;
 
-    public UserService(AppDbContext context, IImageKitService imageKitService)
+    public OrganizationService(AppDbContext context, IImageKitService imageKitService)
     {
         _context = context;
         _imageKitService = imageKitService;
     }
 
-    public async Task<UserProfileResponseDto> GetProfileAsync(Guid userId)
+    public async Task<OrganizationResponseDto> GetOrganizationAsync(Guid userId)
     {
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
+            .Include(u => u.OrganizationDetails)
+            .FirstOrDefaultAsync(u => u.Id == userId && u.Role == 2);
 
         if (user == null)
-            throw new Exception("Пользователь не найден");
+            throw new Exception("Организация не найдена");
 
-        return new UserProfileResponseDto
+        return new OrganizationResponseDto
         {
             UserId = user.Id,
             Email = user.Email,
             Name = user.Name,
-            Age = user.Age,
+            Phone = user.OrganizationDetails?.Phone,
+            Website = user.OrganizationDetails?.Website,
+            DonationDetails = user.OrganizationDetails?.DonationDetails,
             Description = user.Description,
             PhotoUrl = user.PhotoUrl,
             SumRating = user.SumRating,
@@ -41,22 +44,30 @@ public class UserService : IUserService
         };
     }
 
-    public async Task<UserProfileResponseDto> UpdateProfileAsync(Guid userId, UpdateProfileDto dto)
+    public async Task<OrganizationResponseDto> UpdateOrganizationAsync(Guid userId, UpdateOrganizationDto dto)
     {
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
+            .Include(u => u.OrganizationDetails)
+            .FirstOrDefaultAsync(u => u.Id == userId && u.Role == 2);
 
         if (user == null)
-            throw new Exception("Пользователь не найден");
+            throw new Exception("Организация не найдена");
 
         if (dto.Name != null)
             user.Name = dto.Name;
 
-        if (dto.Age.HasValue)
-            user.Age = dto.Age;
-
         if (dto.Description != null)
             user.Description = dto.Description;
+
+        if (user.OrganizationDetails != null)
+        {
+            if (dto.Phone != null)
+                user.OrganizationDetails.Phone = dto.Phone;
+            if (dto.Website != null)
+                user.OrganizationDetails.Website = dto.Website;
+            if (dto.DonationDetails != null)
+                user.OrganizationDetails.DonationDetails = dto.DonationDetails;
+        }
 
         if (dto.Photo != null)
         {
@@ -89,12 +100,14 @@ public class UserService : IUserService
 
         await _context.SaveChangesAsync();
 
-        return new UserProfileResponseDto
+        return new OrganizationResponseDto
         {
             UserId = user.Id,
             Email = user.Email,
             Name = user.Name,
-            Age = user.Age,
+            Phone = user.OrganizationDetails?.Phone,
+            Website = user.OrganizationDetails?.Website,
+            DonationDetails = user.OrganizationDetails?.DonationDetails,
             Description = user.Description,
             PhotoUrl = user.PhotoUrl,
             SumRating = user.SumRating,
@@ -102,49 +115,5 @@ public class UserService : IUserService
             Role = user.Role,
             CreatedAt = user.CreatedAt
         };
-    }
-
-    public async Task DeleteProfileAsync(Guid userId)
-    {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
-
-        if (user == null)
-            throw new Exception("Пользователь не найден");
-
-        if (!string.IsNullOrEmpty(user.PhotoUrl))
-        {
-            var fileId = await _imageKitService.GetFileIdFromUrlAsync(user.PhotoUrl);
-            if (fileId != null)
-                await _imageKitService.DeleteImageAsync(fileId);
-        }
-
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task ChangePasswordAsync(Guid userId, ChangePasswordDto dto)
-    {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == userId);
-
-        if (user == null)
-            throw new Exception("Пользователь не найден");
-
-        bool isOldPasswordValid = BCrypt.Net.BCrypt.Verify(dto.OldPassword, user.Password);
-
-        if (!isOldPasswordValid)
-            throw new Exception("Неверный старый пароль");
-
-        if (dto.OldPassword == dto.NewPassword)
-            throw new Exception("Новый пароль должен отличаться от старого");
-
-        if (dto.NewPassword.Length < 8)
-            throw new Exception("Новый пароль должен содержать минимум 8 символов");
-
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-        user.Password = passwordHash;
-
-        await _context.SaveChangesAsync();
     }
 }

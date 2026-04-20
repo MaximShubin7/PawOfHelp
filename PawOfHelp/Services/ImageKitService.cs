@@ -9,13 +9,11 @@ public class ImageKitService : IImageKitService
 {
     private readonly HttpClient _httpClient;
     private readonly string _privateKey;
-    private readonly string _urlEndpoint;
 
     public ImageKitService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _privateKey = configuration["ImageKit:PrivateKey"];
-        _urlEndpoint = configuration["ImageKit:UrlEndpoint"];
 
         if (string.IsNullOrEmpty(_privateKey))
             throw new Exception("ImageKit Private Key не найден в настройках");
@@ -36,10 +34,35 @@ public class ImageKitService : IImageKitService
         using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream);
         var fileBytes = memoryStream.ToArray();
+        var base64Content = Convert.ToBase64String(fileBytes);
 
         var fileName = $"{userId}_{DateTime.UtcNow.Ticks}_{file.FileName}";
 
-        return await UploadToImageKitAsync(fileBytes, fileName, file.ContentType);
+        var requestBody = new
+        {
+            file = $"data:{file.ContentType};base64,{base64Content}",
+            fileName = fileName,
+            folder = "/users",
+            useUniqueFileName = true
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_privateKey}:"));
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {auth}");
+
+        var response = await _httpClient.PostAsync("https://upload.imagekit.io/api/v1/files/upload", content);
+        var responseJson = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"Ошибка загрузки в ImageKit: {responseJson}");
+
+        using var document = JsonDocument.Parse(responseJson);
+        var url = document.RootElement.GetProperty("url").GetString();
+
+        return url;
     }
 
     public async Task<string?> UploadImageFromUrlAsync(string imageUrl, string userId)
@@ -49,25 +72,8 @@ public class ImageKitService : IImageKitService
 
         var fileName = $"{userId}_{DateTime.UtcNow.Ticks}_from_web.jpg";
 
-        return await UploadToImageKitAsync(imageUrl, fileName);
-    }
-
-    private async Task<string?> UploadToImageKitAsync(object fileSource, string fileName, string? contentType = null)
-    {
         using var formData = new MultipartFormDataContent();
-
-        if (fileSource is byte[] bytes)
-        {
-            var fileContent = new ByteArrayContent(bytes);
-            if (contentType != null)
-                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-            formData.Add(fileContent, "file", fileName);
-        }
-        else if (fileSource is string url)
-        {
-            formData.Add(new StringContent(url), "file");
-        }
-
+        formData.Add(new StringContent(imageUrl), "file");
         formData.Add(new StringContent(fileName), "fileName");
         formData.Add(new StringContent("/users"), "folder");
         formData.Add(new StringContent("true"), "useUniqueFileName");
@@ -83,9 +89,9 @@ public class ImageKitService : IImageKitService
             throw new Exception($"Ошибка загрузки в ImageKit: {responseJson}");
 
         using var document = JsonDocument.Parse(responseJson);
-        var uploadedUrl = document.RootElement.GetProperty("url").GetString();
+        var url = document.RootElement.GetProperty("url").GetString();
 
-        return uploadedUrl;
+        return url;
     }
 
     public async Task<bool> DeleteImageAsync(string fileId)

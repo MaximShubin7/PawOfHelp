@@ -1,8 +1,8 @@
-﻿// Controllers/UsersController.cs
+﻿// Controllers/OrganizationsController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using PawOfHelp.DTOs.User;
+using PawOfHelp.DTOs.Organization;
 using PawOfHelp.Services.Interfaces;
 using System.Text.Json;
 
@@ -11,13 +11,13 @@ namespace PawOfHelp.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class UsersController : ControllerBase
+public class OrganizationsController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IOrganizationService _organizationService;
 
-    public UsersController(IUserService userService)
+    public OrganizationsController(IOrganizationService organizationService)
     {
-        _userService = userService;
+        _organizationService = organizationService;
     }
 
     [HttpGet("profile")]
@@ -27,7 +27,7 @@ public class UsersController : ControllerBase
 
         try
         {
-            var profile = await _userService.GetProfileAsync(userId);
+            var profile = await _organizationService.GetOrganizationAsync(userId);
             return Ok(profile);
         }
         catch (Exception ex)
@@ -43,14 +43,16 @@ public class UsersController : ControllerBase
 
         try
         {
-            UpdateProfileDto? dto = null;
+            UpdateOrganizationDto? dto = null;
 
             if (Request.HasFormContentType)
             {
-                dto = new UpdateProfileDto
+                dto = new UpdateOrganizationDto
                 {
                     Name = Request.Form["Name"],
-                    Age = short.TryParse(Request.Form["Age"], out var age) ? age : null,
+                    Phone = Request.Form["Phone"],
+                    Website = Request.Form["Website"],
+                    DonationDetails = Request.Form["DonationDetails"],
                     Description = Request.Form["Description"],
                     Photo = Request.Form.Files.GetFile("Photo"),
                     PhotoUrlFromWeb = Request.Form["PhotoUrlFromWeb"]
@@ -60,7 +62,7 @@ public class UsersController : ControllerBase
             {
                 using var reader = new StreamReader(Request.Body);
                 var body = await reader.ReadToEndAsync();
-                dto = JsonSerializer.Deserialize<UpdateProfileDto>(body, new JsonSerializerOptions
+                dto = JsonSerializer.Deserialize<UpdateOrganizationDto>(body, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
@@ -69,40 +71,8 @@ public class UsersController : ControllerBase
             if (dto == null)
                 return BadRequest("Неверный формат запроса");
 
-            var result = await _userService.UpdateProfileAsync(userId, dto);
+            var result = await _organizationService.UpdateOrganizationAsync(userId, dto);
             return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpDelete("profile")]
-    public async Task<IActionResult> DeleteProfile()
-    {
-        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-
-        try
-        {
-            await _userService.DeleteProfileAsync(userId);
-            return Ok(new { message = "Аккаунт успешно удалён" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
-    {
-        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-
-        try
-        {
-            await _userService.ChangePasswordAsync(userId, dto);
-            return Ok(new { message = "Пароль успешно изменён" });
         }
         catch (Exception ex)
         {
