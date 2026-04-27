@@ -25,7 +25,7 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequestDto>
 
         RuleFor(x => x.Role)
             .NotEmpty().WithMessage("Роль обязательна")
-            .Must(role => role == 1 || role == 2)
-            .WithMessage("Роль должна быть 1 (Волонтёр) или 2 (Организация)");
+            .Must(role => role == "Волонтёр" || role == "Организация")
+            .WithMessage("Роль должна быть 'Волонтёр' или 'Организация'");
     }
 }

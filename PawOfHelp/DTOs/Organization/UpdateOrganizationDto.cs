@@ -8,6 +8,8 @@ public class UpdateOrganizationDto
     public string? Website { get; set; }
     public string? DonationDetails { get; set; }
     public string? Description { get; set; }
+    public string? Location { get; set; }
+    public List<string>? ConstantNeeds { get; set; }
     public IFormFile? Photo { get; set; }
     public string? PhotoUrlFromWeb { get; set; }
 }

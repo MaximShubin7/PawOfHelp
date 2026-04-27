@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.Json;
 using PawOfHelp.DTOs.User;
 using PawOfHelp.Services.Interfaces;
-using System.Text.Json;
 
 namespace PawOfHelp.Controllers;
 
@@ -14,10 +14,12 @@ namespace PawOfHelp.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IOrganizationService _organizationService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IOrganizationService organizationService)
     {
         _userService = userService;
+        _organizationService = organizationService;
     }
 
     [HttpGet("profile")]
@@ -52,9 +54,28 @@ public class UsersController : ControllerBase
                     Name = Request.Form["Name"],
                     Age = short.TryParse(Request.Form["Age"], out var age) ? age : null,
                     Description = Request.Form["Description"],
+                    Location = Request.Form["Location"],
                     Photo = Request.Form.Files.GetFile("Photo"),
                     PhotoUrlFromWeb = Request.Form["PhotoUrlFromWeb"]
                 };
+
+                var competencyNamesJson = Request.Form["CompetencyNames"].ToString();
+                if (!string.IsNullOrEmpty(competencyNamesJson))
+                {
+                    dto.CompetencyNames = JsonSerializer.Deserialize<List<string>>(competencyNamesJson);
+                }
+
+                var preferenceNamesJson = Request.Form["PreferenceNames"].ToString();
+                if (!string.IsNullOrEmpty(preferenceNamesJson))
+                {
+                    dto.PreferenceNames = JsonSerializer.Deserialize<List<string>>(preferenceNamesJson);
+                }
+
+                var availabilityNamesJson = Request.Form["AvailabilityNames"].ToString();
+                if (!string.IsNullOrEmpty(availabilityNamesJson))
+                {
+                    dto.AvailabilityNames = JsonSerializer.Deserialize<List<string>>(availabilityNamesJson);
+                }
             }
             else if (Request.ContentType?.Contains("application/json") == true)
             {
@@ -103,6 +124,29 @@ public class UsersController : ControllerBase
         {
             await _userService.ChangePasswordAsync(userId, dto);
             return Ok(new { message = "Пароль успешно изменён" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet("public/{userId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPublicProfile(Guid userId)
+    {
+        try
+        {
+            var role = await _userService.GetUserRoleAsync(userId);
+
+            if (role == "Организация")
+            {
+                var result = await _organizationService.GetPublicOrganizationProfileAsync(userId);
+                return Ok(result);
+            }
+
+            var userResult = await _userService.GetPublicUserProfileAsync(userId);
+            return Ok(userResult);
         }
         catch (Exception ex)
         {

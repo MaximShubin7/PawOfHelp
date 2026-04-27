@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PawOfHelp.Data;
 using PawOfHelp.DTOs.Comment;
+using PawOfHelp.DTOs.Public;
 using PawOfHelp.Models;
 using PawOfHelp.Services.Interfaces;
 
@@ -55,17 +56,17 @@ public class CommentService : ICommentService
         await _context.SaveChangesAsync();
 
         var sender = await _context.Users.FindAsync(senderId);
-        var recipientInfo = await _context.Users.FindAsync(dto.RecipientId);
 
         return new CommentResponseDto
         {
             Id = comment.Id,
             Rating = comment.Rating,
             Description = comment.Description,
-            SenderId = comment.SenderId,
-            SenderName = sender?.Name ?? string.Empty,
-            RecipientId = comment.RecipientId,
-            RecipientName = recipientInfo?.Name ?? string.Empty,
+            Sender = new PublicProfileDto
+            {
+                Id = senderId,
+                Name = sender?.Name ?? string.Empty
+            },
             CreatedAt = comment.CreatedAt
         };
     }
@@ -74,7 +75,6 @@ public class CommentService : ICommentService
     {
         var comment = await _context.Comments
             .Include(c => c.Sender)
-            .Include(c => c.Recipient)
             .FirstOrDefaultAsync(c => c.Id == commentId);
 
         if (comment == null)
@@ -106,15 +106,18 @@ public class CommentService : ICommentService
 
         await _context.SaveChangesAsync();
 
+        var sender = await _context.Users.FindAsync(comment.SenderId);
+
         return new CommentResponseDto
         {
             Id = comment.Id,
             Rating = comment.Rating,
             Description = comment.Description,
-            SenderId = comment.SenderId,
-            SenderName = comment.Sender?.Name ?? string.Empty,
-            RecipientId = comment.RecipientId,
-            RecipientName = comment.Recipient?.Name ?? string.Empty,
+            Sender = new PublicProfileDto
+            {
+                Id = comment.SenderId,
+                Name = sender?.Name ?? string.Empty
+            },
             CreatedAt = comment.CreatedAt
         };
     }
@@ -143,6 +146,10 @@ public class CommentService : ICommentService
 
     public async Task<CommentListResponseDto> GetUserCommentsAsync(Guid userId, int offset, int limit)
     {
+        var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+            throw new Exception("Пользователь не найден");
+
         if (limit <= 0 || limit > 50)
             limit = 10;
 
@@ -151,7 +158,6 @@ public class CommentService : ICommentService
 
         var query = _context.Comments
             .Include(c => c.Sender)
-            .Include(c => c.Recipient)
             .Where(c => c.RecipientId == userId)
             .OrderByDescending(c => c.CreatedAt);
 
@@ -165,10 +171,11 @@ public class CommentService : ICommentService
                 Id = c.Id,
                 Rating = c.Rating,
                 Description = c.Description,
-                SenderId = c.SenderId,
-                SenderName = c.Sender != null ? c.Sender.Name : string.Empty,
-                RecipientId = c.RecipientId,
-                RecipientName = c.Recipient != null ? c.Recipient.Name : string.Empty,
+                Sender = new PublicProfileDto
+                {
+                    Id = c.SenderId,
+                    Name = c.Sender != null ? c.Sender.Name : string.Empty
+                },
                 CreatedAt = c.CreatedAt
             })
             .ToListAsync();
@@ -176,7 +183,6 @@ public class CommentService : ICommentService
         return new CommentListResponseDto
         {
             Comments = comments,
-            TotalCount = totalCount,
             Offset = offset,
             Limit = limit,
             HasMore = offset + limit < totalCount

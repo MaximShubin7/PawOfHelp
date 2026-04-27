@@ -1,4 +1,4 @@
-﻿// Controllers/CommentsController.cs (обновлённый с валидацией)
+﻿// Controllers/CommentsController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -85,7 +85,7 @@ public class CommentsController : ControllerBase
 
     [HttpGet("user/{userId}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetUserComments(Guid userId, [FromQuery] int offset = 0, [FromQuery] int limit = 10)
+    public async Task<IActionResult> GetUserComments(Guid userId, [FromQuery] int offset = 0, [FromQuery] int limit = 5)
     {
         try
         {

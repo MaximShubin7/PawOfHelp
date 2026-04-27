@@ -7,5 +7,6 @@ public class OrganizationDetails
     public string? Phone { get; set; }
     public string? Website { get; set; }
     public string? DonationDetails { get; set; }
+
     public User User { get; set; } = null!;
 }

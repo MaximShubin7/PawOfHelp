@@ -7,4 +7,5 @@ public interface IOrganizationService
 {
     Task<OrganizationResponseDto> GetOrganizationAsync(Guid userId);
     Task<OrganizationResponseDto> UpdateOrganizationAsync(Guid userId, UpdateOrganizationDto dto);
+    Task<OrganizationResponseDto> GetPublicOrganizationProfileAsync(Guid userId);
 }

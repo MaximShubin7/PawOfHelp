@@ -1,4 +1,6 @@
 ﻿// DTOs/Comment/CommentResponseDto.cs
+using PawOfHelp.DTOs.Public;
+
 namespace PawOfHelp.DTOs.Comment;
 
 public class CommentResponseDto
@@ -6,9 +8,6 @@ public class CommentResponseDto
     public Guid Id { get; set; }
     public short Rating { get; set; }
     public string? Description { get; set; }
-    public Guid SenderId { get; set; }
-    public string SenderName { get; set; } = string.Empty;
-    public Guid RecipientId { get; set; }
-    public string RecipientName { get; set; } = string.Empty;
+    public PublicProfileDto Sender { get; set; } = new();
     public DateTime CreatedAt { get; set; }
 }

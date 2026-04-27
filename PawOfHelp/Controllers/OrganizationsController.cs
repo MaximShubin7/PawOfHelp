@@ -54,9 +54,16 @@ public class OrganizationsController : ControllerBase
                     Website = Request.Form["Website"],
                     DonationDetails = Request.Form["DonationDetails"],
                     Description = Request.Form["Description"],
+                    Location = Request.Form["Location"],
                     Photo = Request.Form.Files.GetFile("Photo"),
                     PhotoUrlFromWeb = Request.Form["PhotoUrlFromWeb"]
                 };
+
+                var constantNeedsJson = Request.Form["ConstantNeeds"].ToString();
+                if (!string.IsNullOrEmpty(constantNeedsJson))
+                {
+                    dto.ConstantNeeds = JsonSerializer.Deserialize<List<string>>(constantNeedsJson);
+                }
             }
             else if (Request.ContentType?.Contains("application/json") == true)
             {
