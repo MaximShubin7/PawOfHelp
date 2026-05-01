@@ -25,6 +25,16 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -46,7 +56,6 @@ builder.Services.AddScoped<IValidator<CreateAnimalDto>, CreateAnimalValidator>()
 builder.Services.AddScoped<IValidator<UpdateAnimalDto>, UpdateAnimalValidator>();
 builder.Services.AddScoped<IValidator<CreateHelpTaskDto>, CreateHelpTaskValidator>();
 builder.Services.AddScoped<IValidator<UpdateHelpTaskDto>, UpdateHelpTaskValidator>();
-builder.Services.AddScoped<IValidator<CreateResponseDto>, CreateResponseValidator>();
 builder.Services.AddScoped<IValidator<CreateResponseDto>, CreateResponseValidator>();
 builder.Services.AddScoped<IValidator<UpdateResponseStatusDto>, UpdateResponseStatusValidator>();
 
@@ -93,6 +102,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
