@@ -7,9 +7,9 @@ public class UpdateProfileDto
     public short? Age { get; set; }
     public string? Description { get; set; }
     public string? Location { get; set; }
-    public List<string>? CompetencyNames { get; set; }
-    public List<string>? PreferenceNames { get; set; }
-    public List<string>? AvailabilityNames { get; set; }
+    public List<string>? Competencies { get; set; }
+    public List<string>? Preferences { get; set; }
+    public List<string>? Availabilities { get; set; }
     public IFormFile? Photo { get; set; }
     public string? PhotoUrlFromWeb { get; set; }
 }

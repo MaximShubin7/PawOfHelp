@@ -279,19 +279,19 @@ public class UserService : IUserService
             user.LocationId = locationId;
         }
 
-        if (dto.CompetencyNames != null)
+        if (dto.Competencies != null)
         {
-            await UpdateUserCompetenciesAsync(userId, dto.CompetencyNames);
+            await UpdateUserCompetenciesAsync(userId, dto.Competencies);
         }
 
-        if (dto.PreferenceNames != null)
+        if (dto.Preferences != null)
         {
-            await UpdateUserPreferencesAsync(userId, dto.PreferenceNames);
+            await UpdateUserPreferencesAsync(userId, dto.Preferences);
         }
 
-        if (dto.AvailabilityNames != null)
+        if (dto.Availabilities != null)
         {
-            await UpdateUserAvailabilitiesAsync(userId, dto.AvailabilityNames);
+            await UpdateUserAvailabilitiesAsync(userId, dto.Availabilities);
         }
 
         if (dto.Photo != null)

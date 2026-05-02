@@ -62,19 +62,19 @@ public class UsersController : ControllerBase
                 var competencyNamesJson = Request.Form["CompetencyNames"].ToString();
                 if (!string.IsNullOrEmpty(competencyNamesJson))
                 {
-                    dto.CompetencyNames = JsonSerializer.Deserialize<List<string>>(competencyNamesJson);
+                    dto.Competencies = JsonSerializer.Deserialize<List<string>>(competencyNamesJson);
                 }
 
                 var preferenceNamesJson = Request.Form["PreferenceNames"].ToString();
                 if (!string.IsNullOrEmpty(preferenceNamesJson))
                 {
-                    dto.PreferenceNames = JsonSerializer.Deserialize<List<string>>(preferenceNamesJson);
+                    dto.Preferences = JsonSerializer.Deserialize<List<string>>(preferenceNamesJson);
                 }
 
                 var availabilityNamesJson = Request.Form["AvailabilityNames"].ToString();
                 if (!string.IsNullOrEmpty(availabilityNamesJson))
                 {
-                    dto.AvailabilityNames = JsonSerializer.Deserialize<List<string>>(availabilityNamesJson);
+                    dto.Availabilities = JsonSerializer.Deserialize<List<string>>(availabilityNamesJson);
                 }
             }
             else if (Request.ContentType?.Contains("application/json") == true)
