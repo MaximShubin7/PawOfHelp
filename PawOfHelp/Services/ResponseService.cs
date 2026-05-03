@@ -33,7 +33,17 @@ public class ResponseService : IResponseService
             .FirstOrDefaultAsync(r => r.SenderId == senderId && r.TaskId == dto.TaskId);
 
         if (existingResponse != null)
-            throw new Exception("Вы уже откликнулись на эту задачу");
+        {
+            if (existingResponse.Status.Name == "Отклонен")
+            {
+                _context.Responses.Remove(existingResponse);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new Exception("Вы уже откликнулись на эту задачу");
+            }
+        }
 
         var pendingStatus = await _context.Statuses
             .FirstOrDefaultAsync(s => s.Name == "На рассмотрении");
@@ -92,25 +102,86 @@ public class ResponseService : IResponseService
                     UserId = response.SenderId
                 });
             }
+        }
+        else if (status.Name == "Отклонен")
+        {
+            var existingWorker = await _context.Workers
+                .FirstOrDefaultAsync(w => w.TaskId == response.TaskId && w.UserId == response.SenderId);
 
-            var otherResponses = await _context.Responses
-                .Include(r => r.Status)
-                .Where(r => r.TaskId == response.TaskId && r.Id != responseId && r.Status.Name == "На рассмотрении")
-                .ToListAsync();
-
-            var rejectedStatus = await _context.Statuses.FirstOrDefaultAsync(s => s.Name == "Отклонен");
-            if (rejectedStatus != null)
+            if (existingWorker != null)
             {
-                foreach (var otherResponse in otherResponses)
-                {
-                    otherResponse.StatusId = rejectedStatus.Id;
-                }
+                _context.Workers.Remove(existingWorker);
             }
         }
 
         await _context.SaveChangesAsync();
 
         return await GetResponseByIdAsync(response.Id);
+    }
+
+    public async Task DeleteResponseAsync(Guid responseId, Guid userId)
+    {
+        var response = await _context.Responses
+            .Include(r => r.Status)
+            .FirstOrDefaultAsync(r => r.Id == responseId);
+
+        if (response == null)
+            throw new Exception("Отклик не найден");
+
+        if (response.SenderId != userId)
+            throw new Exception("Вы можете удалить только свой отклик");
+
+        if (response.Status.Name == "Принят")
+            throw new Exception("Нельзя удалить принятый отклик. Сначала открепитесь от задачи.");
+
+        var task = await _context.HelpTasks.FindAsync(response.TaskId);
+        if (task != null && task.CountResponses > 0)
+        {
+            task.CountResponses--;
+        }
+
+        _context.Responses.Remove(response);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task RemoveWorkerAsync(Guid taskId, Guid userId, Guid workerId)
+    {
+        var task = await _context.HelpTasks
+            .FirstOrDefaultAsync(t => t.Id == taskId);
+
+        if (task == null)
+            throw new Exception("Задача не найдена");
+
+        if (task.CreatorId != userId && workerId != userId)
+            throw new Exception("У вас нет прав для удаления этого исполнителя");
+
+        var worker = await _context.Workers
+            .FirstOrDefaultAsync(w => w.TaskId == taskId && w.UserId == workerId);
+
+        if (worker == null)
+            throw new Exception("Исполнитель не найден");
+
+        var response = await _context.Responses
+            .FirstOrDefaultAsync(r => r.TaskId == taskId && r.SenderId == workerId);
+
+        if (response != null)
+        {
+            var rejectedStatus = await _context.Statuses
+                .FirstOrDefaultAsync(s => s.Name == "Отклонен");
+
+            if (rejectedStatus != null)
+            {
+                response.StatusId = rejectedStatus.Id;
+            }
+
+            if (task.CountResponses > 0)
+            {
+                task.CountResponses--;
+            }
+        }
+
+        _context.Workers.Remove(worker);
+        await _context.SaveChangesAsync();
     }
 
     private async Task<ResponseResponseDto> GetResponseByIdAsync(Guid responseId)
@@ -134,7 +205,8 @@ public class ResponseService : IResponseService
             },
             TaskId = response.TaskId,
             TaskTitle = response.HelpTask?.Title ?? string.Empty,
-            Status = response.Status?.Name ?? "Неизвестно"
+            Status = response.Status?.Name ?? "Неизвестно",
+            CreatedAt = response.CreatedAt
         };
     }
 
@@ -161,7 +233,7 @@ public class ResponseService : IResponseService
         var responses = await query
             .Include(r => r.Sender)
             .Include(r => r.Status)
-            .OrderByDescending(r => r.Id)
+            .OrderByDescending(r => r.CreatedAt)
             .Skip(offset)
             .Take(limit)
             .ToListAsync();
@@ -179,7 +251,8 @@ public class ResponseService : IResponseService
                 },
                 TaskId = response.TaskId,
                 TaskTitle = response.HelpTask?.Title ?? string.Empty,
-                Status = response.Status?.Name ?? "Неизвестно"
+                Status = response.Status?.Name ?? "Неизвестно",
+                CreatedAt = response.CreatedAt
             });
         }
 
@@ -207,9 +280,8 @@ public class ResponseService : IResponseService
 
         var responses = await query
             .Include(r => r.Sender)
-            .Include(r => r.HelpTask)
             .Include(r => r.Status)
-            .OrderByDescending(r => r.Id)
+            .OrderByDescending(r => r.CreatedAt)
             .Skip(offset)
             .Take(limit)
             .ToListAsync();
@@ -227,7 +299,8 @@ public class ResponseService : IResponseService
                 },
                 TaskId = response.TaskId,
                 TaskTitle = response.HelpTask?.Title ?? string.Empty,
-                Status = response.Status?.Name ?? "Неизвестно"
+                Status = response.Status?.Name ?? "Неизвестно",
+                CreatedAt = response.CreatedAt
             });
         }
 
@@ -257,7 +330,7 @@ public class ResponseService : IResponseService
             .Include(r => r.Sender)
             .Include(r => r.HelpTask)
             .Include(r => r.Status)
-            .OrderByDescending(r => r.Id)
+            .OrderByDescending(r => r.CreatedAt)
             .Skip(offset)
             .Take(limit)
             .ToListAsync();
@@ -275,7 +348,8 @@ public class ResponseService : IResponseService
                 },
                 TaskId = response.TaskId,
                 TaskTitle = response.HelpTask?.Title ?? string.Empty,
-                Status = response.Status?.Name ?? "Неизвестно"
+                Status = response.Status?.Name ?? "Неизвестно",
+                CreatedAt = response.CreatedAt
             });
         }
 

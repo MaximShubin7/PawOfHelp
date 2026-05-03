@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<TaskCompetency> TaskCompetencies { get; set; }
     public DbSet<TaskLocation> TaskLocations { get; set; }
     public DbSet<Worker> Workers { get; set; }
+    public DbSet<ReferenceBook> ReferenceBook { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -218,7 +219,6 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(e => e.SenderId);
             entity.HasIndex(e => e.TaskId);
-            entity.HasIndex(e => e.StatusId);
 
             entity.HasOne(e => e.Sender)
                   .WithMany()
@@ -365,6 +365,23 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.TaskId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReferenceBook>(entity =>
+        {
+            entity.HasKey(e => new { e.AnimalTypeId, e.ThemeId });
+
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(5000);
+            entity.Property(e => e.VideoUrl).HasMaxLength(500);
+
+            entity.HasOne(e => e.AnimalType)
+                  .WithMany()
+                  .HasForeignKey(e => e.AnimalTypeId);
+
+            entity.HasOne(e => e.Theme)
+                  .WithMany()
+                  .HasForeignKey(e => e.ThemeId);
         });
     }
 }

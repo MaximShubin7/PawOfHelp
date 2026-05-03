@@ -67,6 +67,38 @@ public class ResponsesController : ControllerBase
         }
     }
 
+    [HttpDelete("{responseId}")]
+    public async Task<IActionResult> DeleteResponse(Guid responseId)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+        try
+        {
+            await _responseService.DeleteResponseAsync(responseId, userId);
+            return Ok(new { message = "Отклик успешно удалён" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("task/{taskId}/worker/{workerId}")]
+    public async Task<IActionResult> RemoveWorker(Guid taskId, Guid workerId)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+        try
+        {
+            await _responseService.RemoveWorkerAsync(taskId, userId, workerId);
+            return Ok(new { message = "Исполнитель удалён из задачи" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpGet("task/{taskId}")]
     public async Task<IActionResult> GetByTask(Guid taskId, [FromQuery] int offset = 0, [FromQuery] int limit = 10)
     {
