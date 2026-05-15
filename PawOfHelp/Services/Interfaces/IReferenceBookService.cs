@@ -5,5 +5,5 @@ namespace PawOfHelp.Services.Interfaces;
 
 public interface IReferenceBookService
 {
-    Task<ReferenceBookResponseDto> GetByAnimalTypeAndThemeAsync(ReferenceBookRequestDto request);
+    Task<List<ReferenceBookResponseDto>> GetByAnimalTypeAndThemesAsync(ReferenceBookRequestDto request);
 }

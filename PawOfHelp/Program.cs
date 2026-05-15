@@ -14,6 +14,7 @@ using PawOfHelp.DTOs.Post;
 using PawOfHelp.DTOs.ReferenceBook;
 using PawOfHelp.DTOs.Response;
 using PawOfHelp.DTOs.User;
+using PawOfHelp.Hubs;
 using PawOfHelp.Services;
 using PawOfHelp.Services.Interfaces;
 using PawOfHelp.Validators.Animal;
@@ -86,6 +87,10 @@ builder.Services.AddHostedService<ExpiredCodesCleanupService>();
 builder.Services.AddHostedService<RejectedResponsesCleanupService>();
 builder.Services.AddHostedService<ExpiredTasksCleanupService>();
 
+builder.Services.AddSignalR();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IChatService, ChatService>();
+
 builder.Services.AddOptions();
 builder.Services.AddHttpClient<ResendClient>();
 builder.Services.Configure<ResendClientOptions>(o => o.ApiToken = builder.Configuration["Resend:ApiToken"]);
@@ -116,6 +121,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors("AllowAll");
+app.MapHub<ChatHub>("/chathub");
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

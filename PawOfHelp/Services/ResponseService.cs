@@ -28,6 +28,16 @@ public class ResponseService : IResponseService
         if (task.CreatorId == senderId)
             throw new Exception("Нельзя откликнуться на свою задачу");
 
+        var sender = await _context.Users
+        .Include(u => u.Role)
+        .FirstOrDefaultAsync(u => u.Id == senderId);
+
+        if (sender == null)
+            throw new Exception("Пользователь не найден");
+
+        if (sender.Role.Name != "Волонтёр")
+            throw new Exception("Только волонтёры могут откликаться на задачи");
+
         var existingResponse = await _context.Responses
             .Include(r => r.Status)
             .FirstOrDefaultAsync(r => r.SenderId == senderId && r.TaskId == dto.TaskId);
@@ -102,6 +112,21 @@ public class ResponseService : IResponseService
                     UserId = response.SenderId
                 });
             }
+
+            var isParticipant = await _context.ChatParticipants
+                .AnyAsync(p => p.TaskId == response.TaskId && p.UserId == response.SenderId);
+
+            if (!isParticipant)
+            {
+                _context.ChatParticipants.Add(new ChatParticipant
+                {
+                    TaskId = response.TaskId,
+                    UserId = response.SenderId,
+                    LastReadAt = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
         }
         else if (status.Name == "Отклонен")
         {

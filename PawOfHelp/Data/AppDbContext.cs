@@ -34,6 +34,9 @@ public class AppDbContext : DbContext
     public DbSet<TaskLocation> TaskLocations { get; set; }
     public DbSet<Worker> Workers { get; set; }
     public DbSet<ReferenceBook> ReferenceBook { get; set; }
+    public DbSet<ChatRoom> ChatRooms { get; set; }
+    public DbSet<ChatParticipant> ChatParticipants { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -382,6 +385,38 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Theme)
                   .WithMany()
                   .HasForeignKey(e => e.ThemeId);
+        });
+
+        modelBuilder.Entity<ChatRoom>(entity =>
+        {
+            entity.HasKey(e => e.TaskId);
+            entity.Property(e => e.LastMessageAt).HasDefaultValueSql("NOW()");
+            entity.HasOne(e => e.Task)
+                  .WithOne()
+                  .HasForeignKey<ChatRoom>(e => e.TaskId);
+        });
+
+        modelBuilder.Entity<ChatParticipant>(entity =>
+        {
+            entity.HasKey(e => new { e.TaskId, e.UserId });
+            entity.HasOne(e => e.ChatRoom)
+                  .WithMany(r => r.Participants)
+                  .HasForeignKey(e => e.TaskId);
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId);
+        });
+
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.ChatRoom)
+                  .WithMany(r => r.Messages)
+                  .HasForeignKey(e => e.TaskId);
+            entity.HasOne(e => e.Sender)
+                  .WithMany()
+                  .HasForeignKey(e => e.SenderId);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 }

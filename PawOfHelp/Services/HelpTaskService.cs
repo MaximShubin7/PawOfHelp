@@ -105,12 +105,6 @@ public class HelpTaskService : IHelpTaskService
 
         var userRole = await GetUserRoleAsync(creatorId);
 
-        if (userRole == "Организация" && dto.IsTaskOverexposure)
-            throw new Exception("Организации не могут создавать задачи передержки");
-
-        if (userRole == "Волонтёр" && !dto.IsTaskOverexposure)
-            throw new Exception("Волонтёры могут создавать только задачи передержки");
-
         if (dto.StartedAt >= dto.EndedAt)
             throw new Exception("Дата окончания должна быть позже даты начала");
 
@@ -132,6 +126,15 @@ public class HelpTaskService : IHelpTaskService
         };
 
         _context.HelpTasks.Add(task);
+        await _context.SaveChangesAsync();
+
+        _context.ChatRooms.Add(new ChatRoom { TaskId = task.Id, LastMessageAt = DateTime.UtcNow });
+        _context.ChatParticipants.Add(new ChatParticipant
+        {
+            TaskId = task.Id,
+            UserId = creatorId,
+            LastReadAt = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync();
 
         if (dto.AnimalIds != null && dto.AnimalIds.Any())

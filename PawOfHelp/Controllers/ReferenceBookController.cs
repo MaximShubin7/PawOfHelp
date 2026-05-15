@@ -32,7 +32,7 @@ public class ReferenceBookController : ControllerBase
 
         try
         {
-            var result = await _referenceBookService.GetByAnimalTypeAndThemeAsync(request);
+            var result = await _referenceBookService.GetByAnimalTypeAndThemesAsync(request);
             return Ok(result);
         }
         catch (Exception ex)

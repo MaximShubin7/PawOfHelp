@@ -11,9 +11,5 @@ public class ReferenceBookRequestValidator : AbstractValidator<ReferenceBookRequ
         RuleFor(x => x.AnimalType)
             .NotEmpty().WithMessage("Тип животного обязателен")
             .MaximumLength(50).WithMessage("Тип животного не должен превышать 50 символов");
-
-        RuleFor(x => x.Theme)
-            .NotEmpty().WithMessage("Тема обязательна")
-            .MaximumLength(100).WithMessage("Тема не должна превышать 100 символов");
     }
 }
